@@ -1,10 +1,13 @@
+
 import math
+from abc import ABC
 
 from manim import *
 
 
 class VectorTrial:
-    def __init__(self, tail, head, angle_degrees, percent, arrow_length, vector_stroke_width, arrow_stroke_width):
+    def __init__(self, tail, head, angle_degrees, percent, arrow_length, vector_stroke_width, arrow_stroke_width,
+                 arrow_point_to):
         self.tail = tail
         self.head = head
         self.angle_degrees = angle_degrees
@@ -12,6 +15,8 @@ class VectorTrial:
         self.arrow_length = arrow_length
         self.vector_stroke_width = vector_stroke_width
         self.arrow_stroke_width = arrow_stroke_width
+        self.arrow_point_to = 0
+        self.arrow_point_to = arrow_point_to
 
     def myVector(self):
         # head = np.array([2, -1, 0])
@@ -29,8 +34,8 @@ class VectorTrial:
              * (self.head[1] - self.tail[1]), 0])
 
         vector_line = Line(line_tail, line_head, stroke_width=self.vector_stroke_width)
-        angle_to_axis = angle_of_vector([self.head[0] - self.tail[0], self.head[1] - self.tail[1], self.head[2]
-                                         - self.tail[1]])
+        angle_to_axis = angle_of_vector([-self.tail[0] + self.arrow_point_to[0], -self.tail[1] + self.arrow_point_to[1],
+                                         -self.tail[2] + self.arrow_point_to[2]])
         first_arrow_angle_to_axis = angle - angle_to_axis
         arrowx = line_head[0] - self.arrow_length * math.cos(first_arrow_angle_to_axis)
         arrowy = line_head[1] + self.arrow_length * math.sin(first_arrow_angle_to_axis)
@@ -51,6 +56,50 @@ class VectorTrial:
         return [vector_line, arrow_line, second_arrow_line]
 
 
+class CustomArrowTip(ArrowTip, Triangle, ABC):
+    def __init__(self, **kwargs):
+        Triangle.__init__(self)
+        self.scale(0.05)
+        self.set_color(WHITE)
+        self.set_fill(color=WHITE, opacity=0)
+
+
+class SelfArrow:
+    def __init__(self, location, center, remaining_angle, arrowtip):
+        self.location = location
+        self.center = center
+        self.remaining_angle = remaining_angle
+        self.arrowtip = arrowtip
+
+    def path_to_itself(self):
+        radius = math.sqrt((self.location[0] - self.center[0]) * (self.location[0] - self.center[0]) +
+                           (self.location[1] - self.center[1]) * (self.location[1] - self.center[1]) +
+                           (self.location[2] - self.center[2]) * (self.location[2] - self.center[2]))
+        start_angle = angle_of_vector([self.location[0] - self.center[0],
+                                       self.location[1] - self.center[1],
+                                       self.location[2] - self.center[2]])
+        circle = Arc(radius=radius, start_angle=start_angle, angle=2 * PI - self.remaining_angle,
+                     arc_center=self.center, stroke_width=2)
+        final_angle = start_angle + 2 * PI - self.remaining_angle
+        epsilon_angle = 1 * PI / 180
+        vector_start_point = np.array([self.center[0] + radius * math.cos(final_angle),
+                                       self.center[1] + radius * math.sin(final_angle),
+                                       0])
+        vector_end_point = np.array([self.center[0] + radius * math.cos(final_angle + epsilon_angle),
+                                     self.center[1] + radius * math.sin(final_angle + epsilon_angle),
+                                     0])
+        arrow = Arrow(
+            vector_start_point,
+            vector_end_point,
+            stroke_width=2,
+            max_tip_length_to_length_ratio=0.05,
+            tip_shape=CustomArrowTip
+        )
+        # tip_shape=ArrowTriangleTip #self.arrowtip
+        # round(arrow.tip.tip_length, 3)
+        return [circle, arrow]
+
+
 class PermutePoints:
     def __init__(self, mobjects, what_to_where):
         self.mobjects = mobjects
@@ -60,6 +109,10 @@ class PermutePoints:
         vectors_fade_in = []
         vectors_fade_out = []
         mobject_moves = []
+        circ_create = []
+        circ_uncreate = []
+        tip_create = []
+        tip_uncreate = []
 
         for counter in range(len(self.mobjects)):
             point_to_move_to = self.what_to_where[counter].get_center()
@@ -71,10 +124,14 @@ class PermutePoints:
                 self.mobjects[counter].target.move_to(point_to_move_to)
                 mobject_moves.append(MoveToTarget(self.mobjects[counter]))
                 vector_tail = self.mobjects[counter].get_center()
-                vector = VectorTrial(tail=vector_tail, head=point_to_move_to, angle_degrees=30, percent=[0, 0.90],
-                                     arrow_length=0.1, vector_stroke_width=2, arrow_stroke_width=0.75).myVector()
-                vectors_fade_in.append(FadeIn(*vector))
-                vectors_fade_out.append(FadeOut(*vector))
+                vector = Arrow(vector_tail,
+                               point_to_move_to,
+                               stroke_width=2,
+                               max_tip_length_to_length_ratio=0.05,
+                               tip_shape=CustomArrowTip
+                               )
+                vectors_fade_in.append(Create(vector, run_time=1))
+                vectors_fade_out.append(FadeOut(vector, run_time=1))
             else:
                 list_x_coords = []
                 list_y_coords = []
@@ -86,7 +143,7 @@ class PermutePoints:
                     list_z_coords.append(self.mobjects[tracker].get_center()[2])
 
                 com = [center_of_mass(list_x_coords), center_of_mass(list_y_coords), center_of_mass(list_z_coords)]
-                distance = 0.3
+                distance = 0.2
                 dot = self.mobjects[counter]
                 t = 1 + distance / math.sqrt((dot.get_center()[0] - com[0]) * (dot.get_center()[0] - com[0]) +
                                              (dot.get_center()[1] - com[1]) * (dot.get_center()[1] - com[1]))
@@ -99,12 +156,29 @@ class PermutePoints:
                 start_angle = angle_of_vector([dot.get_center()[0] - circle_center_x,
                                                dot.get_center()[1] - circle_center_y,
                                                dot.get_center()[2] - circle_center_z])
-                circle = Arc(radius=distance, start_angle=start_angle, angle=2 * PI - PI / 6 + start_angle,
-                             arc_center=circle_center)
+                rotang = PI / 6
+                # circle = Arc(radius=distance, start_angle=start_angle, angle=2 * PI - rotang,
+                #             arc_center=circle_center, stroke_width=2)
                 mobject_moves.append(Rotating(self.mobjects[counter],
                                               about_point=circle_center, run_time=1))
+                arrow_points = np.array(circle_center + [distance * math.cos(-rotang + start_angle),
+                                                         distance * math.sin(-rotang + start_angle),
+                                                         0])
+                # arrow = VectorTrial(tail=arrow_points, head=arrow_points, angle_degrees=60, percent=[0, 0],
+                #                    arrow_length=0.1, vector_stroke_width=2, arrow_stroke_width=0.75,
+                #                    arrow_point_to=dot.get_center()).myVector()
+                selfarrow = SelfArrow(dot.get_center(), circle_center, 45 * PI / 180, CustomArrowTip)
+                circle, arrow = selfarrow.path_to_itself()
 
-        return vectors_fade_in, vectors_fade_out, mobject_moves
+                circ_time = 0.8
+                arrow_time = 1 - circ_time
+
+                circ_create.append(Create(circle, run_time=circ_time))
+                circ_uncreate.append(FadeOut(circle, run_time=1))
+                tip_create.append(Create(arrow, run_time=arrow_time))
+                tip_uncreate.append(FadeOut(arrow, run_time=1))
+
+        return vectors_fade_in, vectors_fade_out, mobject_moves, circ_create, circ_uncreate, tip_create, tip_uncreate
 
 
 class CyclePoints(Scene):
@@ -136,7 +210,8 @@ class CyclePoints(Scene):
             fade.append(FadeIn(dots[counter], run_time=2))
             vector_tail = dots[counter].get_center()
             vector = VectorTrial(tail=vector_tail, head=pointArray, angle_degrees=30, percent=[0, 0.90],
-                                 arrow_length=0.1, vector_stroke_width=2, arrow_stroke_width=0.75).myVector()
+                                 arrow_length=0.1, vector_stroke_width=2, arrow_stroke_width=0.75,
+                                 arrow_point_to=pointArray).myVector()
             vectors_fade_in.append(FadeIn(*vector))
             vectors_fade_out.append(FadeOut(*vector))
 
@@ -171,11 +246,16 @@ class TryPermute(Scene):
         for counter in range(number_of_points):
             what_to_where.append(dots[permute[counter]])
 
-        vectors_fade_in, vectors_fade_out, mobject_moves \
+        vectors_fade_in, vectors_fade_out, mobject_moves, circ_create, circ_uncreate, tip_create, tip_uncreate \
             = PermutePoints(mobjects=dots, what_to_where=what_to_where).permute()
+
+        animationGroup = []
+
+        for i in range(len(circ_create)):
+            animationGroup.append(AnimationGroup(circ_create[i], tip_create[i], lag_ratio=1))
 
         self.wait()
         self.play(*fade_in_dots)
-        self.play(*vectors_fade_in)
+        self.play(*vectors_fade_in, *animationGroup)
         self.wait()
-        self.play(*vectors_fade_out, *mobject_moves)
+        self.play(*vectors_fade_out, *tip_uncreate, *circ_uncreate, *mobject_moves)
