@@ -259,3 +259,191 @@ class TryPermute(Scene):
         self.play(*vectors_fade_in, *animationGroup)
         self.wait()
         self.play(*vectors_fade_out, *tip_uncreate, *circ_uncreate, *mobject_moves)
+       
+ class LCMExplanation(Scene):
+    def prime_factorization_in_tex(self, num_to_be_factored):
+        tex_string = ''
+        is_last_index = False
+        for prime in factorint(num_to_be_factored):
+            exponent = factorint(num_to_be_factored)[prime]
+            if exponent > 1:
+                tex_string = tex_string + str(prime) + '^{' + str(factorint(num_to_be_factored)[prime]) + '}\cdot '
+            else:
+                tex_string = tex_string + str(prime) + '\cdot '
+
+        if tex_string[len(tex_string) - 2: len(tex_string): 1] == 't ':
+            tex_string = tex_string[0: len(tex_string) - 6: 1]
+
+        return tex_string
+
+    def moveTo(self, mobject, move_to_location, run_time):
+        mobject.generate_target()
+        mobject.target.shift(move_to_location)
+        return MoveToTarget(mobject, run_time=run_time)
+
+    def change_equation(self, text_mobject, new_equation_str, run_time):
+        new_text_mobject = Tex(new_equation_str)
+        new_text_mobject.shift(text_mobject.get_corner(DOWN + LEFT) - new_text_mobject.get_corner(DOWN + LEFT))
+        return Transform(text_mobject, new_text_mobject, run_time=run_time)
+
+    def factorize_with_exp_0(self, int_array):
+        all_primes_with_duplicates = []
+        for index in range(len(int_array)):
+            for prime in factorint(int_array[index]):
+                all_primes_with_duplicates.append(prime)
+        all_primes = []
+        [all_primes.append(x) for x in all_primes_with_duplicates if x not in all_primes]
+        all_primes.sort()
+        prime_factorization_strs = []
+        for index in range(len(int_array)):
+            prime_factorization_strs.append('')
+            for prime in all_primes:
+                exponent = 0
+                if prime in factorint(int_array[index]).keys():
+                    exponent = factorint(int_array[index])[prime]
+
+                if exponent == 1:
+                    prime_factorization_strs[index] += str(prime) + '\cdot '
+                else:
+                    prime_factorization_strs[index] += str(prime) + '^{' + str(
+                        exponent) + '}\cdot '
+
+            if prime_factorization_strs[index][len(prime_factorization_strs[index]) - 2:
+            len(prime_factorization_strs[index]): 1] == 't ':
+                prime_factorization_strs[index] = prime_factorization_strs[index][0:
+                                                                                  len(prime_factorization_strs[
+                                                                                          index]) - 6: 1]
+        return prime_factorization_strs
+
+    def factorize_with_boxed(self, int_array):
+        all_primes_with_duplicates = []
+        for index in range(len(int_array)):
+            for prime in factorint(int_array[index]):
+                all_primes_with_duplicates.append(prime)
+        all_primes = []
+        [all_primes.append(x) for x in all_primes_with_duplicates if x not in all_primes]
+        all_primes.sort()
+        max_exponent_of_prime = []
+        for prime in all_primes:
+            max_exp = 0
+            max_exp_index = 0
+            if prime in factorint(int_array[0]):
+                max_exp = factorint(int_array[0])[prime]
+
+            for index in range(len(int_array)):
+                if prime in factorint(int_array[index]) and factorint(int_array[index])[prime] > max_exp:
+                    max_exp = factorint(int_array[index])[prime]
+                    max_exp_index = index
+            max_exponent_of_prime.append(max_exp_index)
+
+        print(max_exponent_of_prime)
+
+        prime_factorization_boxed_strs = []
+        for index in range(len(int_array)):
+            prime_factorization_boxed_strs.append('')
+            for prime_index in range(len(all_primes)):
+                exponent = 0
+                boxed_str = ''
+                if all_primes[prime_index] in factorint(int_array[index]).keys():
+                    exponent = factorint(int_array[index])[all_primes[prime_index]]
+
+                if exponent == 1:
+                    boxed_str = str(all_primes[prime_index])
+                else:
+                    boxed_str = str(all_primes[prime_index]) + '^{' + str(exponent) + '}'
+                if index == max_exponent_of_prime[prime_index]:
+                    prime_factorization_boxed_strs[index] += '\\boxed{' + boxed_str +'}\cdot '
+                else:
+                    prime_factorization_boxed_strs[index] += boxed_str + '\cdot '
+
+            if prime_factorization_boxed_strs[index][len(prime_factorization_boxed_strs[index]) - 2:
+                                                     len(prime_factorization_boxed_strs[index]): 1] == 't ':
+                prime_factorization_boxed_strs[index] = prime_factorization_boxed_strs[index][0:
+                                                        len(prime_factorization_boxed_strs[index]) - 6: 1]
+        return prime_factorization_boxed_strs
+
+    def construct(self):
+        lcm_inputs = [60, 73, 51]
+        lcm_text = Tex('$\\text{lcm}($')
+        lcm_input_text_str = '$'
+        for int_to_be_factored in lcm_inputs:
+            lcm_input_text_str = lcm_input_text_str + str(int_to_be_factored) + ', '
+        lcm_input_text_str = lcm_input_text_str[0: len(lcm_input_text_str) - 2: 1] + '$'
+
+        buff = 0.05
+        lcm_input_text = Tex(lcm_input_text_str + '$)$')
+        lcm_input_text.next_to(lcm_text, RIGHT, buff=buff)
+
+        full_code = Tex('$\\text{lcm}($' + lcm_input_text_str + '$)$')
+
+        # self.add(full_code)
+        # helps center the expression
+
+        def update_text(obj):
+            obj.next_to(lcm_text, RIGHT, buff=buff)
+
+        lcm_input_text.add_updater(update_text)
+        initial_left_shift_factor = lcm_text.get_corner(direction=DOWN + LEFT)[0] - \
+                                    full_code.get_corner(direction=DOWN + LEFT)[0]
+        lcm_text.shift(LEFT * initial_left_shift_factor)
+        # self.play(LCMExplanation.moveTo(self, lcm_text, LEFT))
+
+        vertical_lcm_inputs_str = ''
+        for inp in lcm_inputs:
+            vertical_lcm_inputs_str = vertical_lcm_inputs_str + str(inp) + ' \\\\'
+
+        lcm_text_final_location = 2.5 * LEFT + 2 * DOWN
+        vertical_lcm_inputs = Tex(vertical_lcm_inputs_str)
+        vertical_lcm_inputs.shift(vertical_lcm_inputs.get_corner(DOWN + RIGHT) -
+                                  full_code.get_corner(UP + RIGHT) +
+                                  UP)
+        prime_factorization_vertical_str = '\\begin{tabular}{l} '
+
+        for input in lcm_inputs:
+            prime_factorization_vertical_str += '$' + str(input) + '=' + \
+                                                str(LCMExplanation.prime_factorization_in_tex(self, input)) + \
+                                                '$\\\\ '
+        prime_factorization_vertical_str = prime_factorization_vertical_str[
+                                           0: len(prime_factorization_vertical_str) - 3: 1] + '\\end{tabular}'
+        prime_fac_exp0 = '\\begin{tabular}{l} '
+        primefact_exp0_strs = LCMExplanation.factorize_with_exp_0(self, lcm_inputs)
+
+        for index in range(len(lcm_inputs)):
+            prime_fac_exp0 += '$' + str(lcm_inputs[index]) + '=' + str(primefact_exp0_strs[index]) + '$\\\\ '
+        prime_fac_exp0 = prime_fac_exp0[0: len(prime_fac_exp0) - 3: 1] + '\\end{tabular}'
+
+        prime_fac_boxed = '\\begin{tabular}{l} '
+        primefact_box_strs = LCMExplanation.factorize_with_boxed(self, lcm_inputs)
+
+        for index in range(len(lcm_inputs)):
+            prime_fac_boxed += '$' + str(lcm_inputs[index]) + '=' + str(primefact_box_strs[index]) + '$\\\\ '
+        prime_fac_boxed = prime_fac_boxed[0: len(prime_fac_boxed) - 3: 1] + '\\end{tabular}'
+
+        lcm = 1
+        for num in lcm_inputs:
+            lcm = lcm * num // math.gcd(lcm, num)
+
+        full_code.shift(lcm_text_final_location)
+
+        lcm_str = '$\\text{lcm}($' + lcm_input_text_str + '$)=' + LCMExplanation.prime_factorization_in_tex(self, lcm) +\
+                  '$'
+
+        # prime_factorization_vertical = Tex(prime_factorization_vertical_str)
+        # prime_factorization_vertical.shift(vertical_lcm_inputs.get_corner(DOWN + LEFT) -
+        #                                   prime_factorization_vertical.get_corner(DOWN + LEFT))
+
+        # self.add(Tex('$73=73$').shift(3 * UP + 3 * LEFT))
+        self.play(FadeIn(lcm_text), FadeIn(lcm_input_text))
+        self.wait()
+        self.play(LCMExplanation.moveTo(self, lcm_text, lcm_text_final_location, 2),
+                  TransformFromCopy(lcm_input_text, vertical_lcm_inputs, run_time=2))
+        self.wait()
+        self.play(LCMExplanation.change_equation(self, vertical_lcm_inputs, prime_factorization_vertical_str, 1))
+        # self.play(Transform(vertical_lcm_inputs, prime_factorization_vertical))
+        self.play(LCMExplanation.change_equation(self, vertical_lcm_inputs, prime_fac_exp0, 1))
+        self.play(LCMExplanation.change_equation(self, vertical_lcm_inputs, prime_fac_boxed, 1))
+        # self.play(LCMExplanation.change_equation(self, lcm_text, '$=$', 1))
+        self.add(full_code)
+        self.remove(lcm_text, lcm_input_text)
+        self.play(LCMExplanation.change_equation(self, full_code, lcm_str, 1))
+
