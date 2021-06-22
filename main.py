@@ -447,3 +447,225 @@ class TryPermute(Scene):
         self.remove(lcm_text, lcm_input_text)
         self.play(LCMExplanation.change_equation(self, full_code, lcm_str, 1))
 
+        
+        class LCMExplanation2(Scene):
+    def prime_factorization_in_tex(self, num_to_be_factored):
+        tex_strs = []
+        for prime in factorint(num_to_be_factored):
+            exponent = factorint(num_to_be_factored)[prime]
+            tex_strs.append(str(prime))
+            if exponent > 1:
+                tex_strs.append('^{' + str(factorint(num_to_be_factored)[prime]) + '}')
+            tex_strs.append('\cdot ')
+
+        if tex_strs[len(tex_strs) - 1] == '\cdot ':
+            tex_strs.pop(len(tex_strs) - 1)
+
+        return tex_strs
+
+    def moveTo(self, mobject, move_to_location, run_time):
+        mobject.generate_target()
+        mobject.target.shift(move_to_location)
+        return MoveToTarget(mobject, run_time=run_time)
+
+    def change_equation(self, text_mobject, new_equation_str, run_time):
+        new_text_mobject = Tex(new_equation_str)
+        new_text_mobject.shift(text_mobject.get_corner(DOWN + LEFT) - new_text_mobject.get_corner(DOWN + LEFT))
+        return Transform(text_mobject, new_text_mobject, run_time=run_time)
+
+    def factorize_array(self, int_array):
+        tex_strs = []
+        for num in int_array:
+            tex_strs.append(str(num))
+            tex_strs.append('&=')
+            for string in LCMExplanation2.prime_factorization_in_tex(self, num):
+                tex_strs.append(string)
+            tex_strs.append('\\\\')
+        tex_strs.pop()
+        return tex_strs
+
+    def factorize_with_exp_0(self, int_array):
+        tex_strs = []
+
+        all_primes_with_duplicates = []
+        for index in range(len(int_array)):
+            for prime in factorint(int_array[index]):
+                all_primes_with_duplicates.append(prime)
+        all_primes = []
+        [all_primes.append(x) for x in all_primes_with_duplicates if x not in all_primes]
+        all_primes.sort()
+        for index in range(len(int_array)):
+            tex_strs.append(str(int_array[index]))
+            tex_strs.append('&=')
+            for prime in all_primes:
+                exponent = 0
+                if prime in factorint(int_array[index]).keys():
+                    exponent = factorint(int_array[index])[prime]
+                tex_strs.append(str(prime))
+
+                if exponent != 1:
+                    tex_strs.append('^{' + str(exponent) + '}')
+
+                tex_strs.append('\cdot ')
+
+            if tex_strs[len(tex_strs) - 1] == '\cdot ':
+                tex_strs.pop(len(tex_strs) - 1)
+            tex_strs.append('\\\\')
+        tex_strs.pop()
+        return tex_strs
+
+    def factorize_with_boxed(self, int_array):
+        tex_strs = []
+
+        all_primes_with_duplicates = []
+        for index in range(len(int_array)):
+            for prime in factorint(int_array[index]):
+                all_primes_with_duplicates.append(prime)
+        all_primes = []
+        [all_primes.append(x) for x in all_primes_with_duplicates if x not in all_primes]
+        all_primes.sort()
+        max_exponent_of_prime = []
+        for prime in all_primes:
+            max_exp = 0
+            max_exp_index = 0
+            if prime in factorint(int_array[0]):
+                max_exp = factorint(int_array[0])[prime]
+
+            for index in range(len(int_array)):
+                if prime in factorint(int_array[index]) and factorint(int_array[index])[prime] > max_exp:
+                    max_exp = factorint(int_array[index])[prime]
+                    max_exp_index = index
+            max_exponent_of_prime.append(max_exp_index)
+
+        for index in range(len(int_array)):
+            tex_strs.append(str(int_array[index]))
+            tex_strs.append('&=')
+            for prime_index in range(len(all_primes)):
+                exponent = 0
+                if all_primes[prime_index] in factorint(int_array[index]).keys():
+                    exponent = factorint(int_array[index])[all_primes[prime_index]]
+                tex_strs.append(str(all_primes[prime_index]))
+
+                if index == max_exponent_of_prime[prime_index]:
+                    tex_strs.append('^{\color{red}' + str(exponent) + '}')
+                elif exponent != 1:
+                    tex_strs.append('^{' + str(exponent) + '}')
+
+                if prime_index != len(all_primes) - 1:
+                    tex_strs.append('\cdot ')
+
+            tex_strs.append('\\\\')
+
+        return tex_strs
+
+    def locations_of_lcm_inputs(self, general_array):
+        input_index_array = [0]
+        while '&=' in general_array[input_index_array[-1] + 1: len(general_array) - 1: 1]:
+            input_index_array.append(general_array.index('&=', input_index_array[-1] + 1, len(general_array) - 1))
+        input_index_array.pop(0)
+        for index in range(len(input_index_array)):
+            input_index_array[index] += -1
+
+        return input_index_array
+
+    def construct(self):
+        lcm_inputs = [60, 73, 51]
+
+        lcm = 1
+        for num in lcm_inputs:
+            lcm = lcm * num // math.gcd(lcm, num)
+
+        lcm_expression_starr = ['\\text{lcm}(']
+        for input in lcm_inputs:
+            lcm_expression_starr.append(str(input))
+            lcm_expression_starr.append(',')
+        lcm_expression_starr[len(lcm_expression_starr) - 1] = ')'
+
+        lcm_expression = MathTex(*lcm_expression_starr)
+
+        factored_inputs_starr = LCMExplanation2.factorize_array(self, lcm_inputs)
+        factored_inputs = MathTex(*factored_inputs_starr)
+
+        factored_exp_0_starr = LCMExplanation2.factorize_with_exp_0(self, lcm_inputs)
+        factored_exp_0 = MathTex(*factored_exp_0_starr)
+
+        factored_colored_exp_starr = LCMExplanation2.factorize_with_boxed(self, lcm_inputs)
+        factored_colored_exp = MathTex(*factored_colored_exp_starr)
+
+        indices_of_factored_lcm_inputs = LCMExplanation2.locations_of_lcm_inputs(self, factored_inputs_starr)
+        indices_of_lcm_inputs_colored_exp = LCMExplanation2.locations_of_lcm_inputs(self, factored_colored_exp_starr)
+
+        lcm_closed_paren_index = 2*len(lcm_inputs)
+
+        lcm_expression_final_location = factored_colored_exp[indices_of_lcm_inputs_colored_exp[-1]].get_corner(DOWN+RIGHT) + \
+                                        DOWN - lcm_expression[lcm_closed_paren_index].get_corner(UP + RIGHT)
+
+        factored_inputs.shift(factored_colored_exp.get_corner(UP+LEFT) -
+                              factored_inputs.get_corner(UP+LEFT))
+        factored_exp_0.shift(factored_colored_exp.get_corner(UP+LEFT) -
+                              factored_exp_0.get_corner(UP+LEFT))
+
+        input_copies = []
+        for index in range(len(lcm_inputs)):
+            input_copies.append(lcm_expression[1+2*index].copy())
+
+        move_copies = []
+        for index in range(len(lcm_inputs)):
+            move_copies.append(input_copies[index].animate.move_to(factored_inputs[indices_of_factored_lcm_inputs[index]].get_center()))
+
+        moves_to_final_locations_1 = []
+        previous_index_1 = 0
+        for index in range(len(factored_inputs)):
+            print(previous_index_1)
+            next_index = factored_exp_0_starr.index(factored_inputs_starr[index], previous_index_1, len(factored_exp_0_starr)-1)
+            move = factored_inputs[index].animate.move_to(factored_exp_0[next_index].get_center())
+            previous_index_1 = next_index
+            moves_to_final_locations_1.append(move)
+
+        moves_to_final_locations_2 = []
+        previous_index_2 = 0
+        print(factored_exp_0_starr)
+        print()
+        print(factored_colored_exp_starr)
+        for index in range(len(factored_exp_0)):
+            if '^' not in factored_exp_0_starr[index]:
+                next_index_2 = factored_colored_exp_starr.index(factored_exp_0_starr[index], previous_index_2,
+                                                    len(factored_colored_exp_starr) - 1)
+            elif factored_exp_0_starr[index][2: -1: 1] == '0':
+                next_index_2 = factored_colored_exp_starr.index(factored_exp_0_starr[index], previous_index_2,
+                                                                len(factored_colored_exp_starr) - 1)
+            else:
+                string_to_find = '^{\\color{red}' + factored_exp_0_starr[index][2: -1: 1] + '}'
+                next_index_2 = factored_colored_exp_starr.index(string_to_find, previous_index_2,
+                                                                len(factored_colored_exp_starr) - 1)
+            move = factored_exp_0[index].animate.move_to(factored_colored_exp[next_index_2].get_center())
+            previous_index_2 = next_index_2
+            moves_to_final_locations_2.append(move)
+
+        lcm_expression_starr.append('=')
+
+        for string in LCMExplanation2.factorize_with_boxed(self, [lcm])[2: -1]:
+            lcm_expression_starr.append(string)
+
+        lcm_expression_final = MathTex(*lcm_expression_starr)
+        lcm_expression_final.shift(lcm_expression[0].get_center() -
+                                   lcm_expression_final[0].get_center() +
+                                   lcm_expression_final_location)
+        lcm_expression_final.set_color_by_tex('\\color{red}', RED)
+
+        # self.play(*initial_lcm_fadeIn)
+        self.play(FadeIn(lcm_expression))
+        self.add(*input_copies)
+        self.play(lcm_expression.animate.move_to(lcm_expression_final_location), *move_copies)
+        self.play(FadeIn(factored_inputs))
+        self.remove(*input_copies)
+        self.play(*moves_to_final_locations_1)
+        self.wait()
+        self.play(FadeIn(factored_exp_0))
+        self.remove(factored_inputs)
+        self.play(*moves_to_final_locations_2)
+        self.wait()
+        self.play(FadeIn(factored_colored_exp))
+        self.play(factored_colored_exp.animate.set_color_by_tex('\\color{red}', RED))
+        self.play(FadeIn(lcm_expression_final))
+        self.remove(lcm_expression)
