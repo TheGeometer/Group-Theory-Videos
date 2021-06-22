@@ -446,4 +446,5 @@ class TryPermute(Scene):
         self.add(full_code)
         self.remove(lcm_text, lcm_input_text)
         self.play(LCMExplanation.change_equation(self, full_code, lcm_str, 1))
+        
 
