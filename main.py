@@ -669,3 +669,58 @@ class TryPermute(Scene):
         self.play(factored_colored_exp.animate.set_color_by_tex('\\color{red}', RED))
         self.play(FadeIn(lcm_expression_final))
         self.remove(lcm_expression)
+        
+        
+ class Logo(Scene):
+    def construct(self):
+        initial_circ = Circle(radius=0.037, fill_color=BLUE, fill_opacity=1, stroke_color=BLUE,
+                              stroke_width=4)
+
+        MAX_RADIUS = 1
+
+        current_radius = 0.037 * 2
+
+        circ_list = [initial_circ]
+
+        counter = 1
+        while current_radius < MAX_RADIUS:
+            new_circ = Circle(radius=current_radius, stroke_width=4, stroke_color=BLUE,
+                              stroke_opacity=math.pow(math.e, -6 * current_radius * current_radius))
+            counter += 1
+            current_radius += 0.037
+            circ_list.append(new_circ)
+
+        circles = VGroup(initial_circ, *circ_list)
+        list = []
+        integral = MathTex('\int')
+        angle = TAU
+
+        n = 5
+        for index in range(n):
+            list.append(MathTex('\int').rotate(2 * math.pi * index / n).scale(3))
+
+        integrals = VGroup(*list)
+        inte = list[1]
+        inte.save_state()
+
+        def update_sector(mob, alpha):
+            mob.restore()
+            start_angle = interpolate(0, angle*180/math.pi, alpha)
+            mob.become(
+                inte.rotate(start_angle*DEGREES).set_opacity(interpolate(0, 1, alpha))
+            )
+        run_time = 2
+        self.add(integrals[0])
+
+        group1 = AnimationGroup(*[UpdateFromAlphaFunc(inte, update_sector,
+                                rate_func=rate_functions.ease_in_out_expo, run_time=run_time),
+            Rotating(integrals[0], radians=angle, rate_func=rate_functions.ease_in_out_expo, run_time=run_time)], lag_ratio=0)
+        #self.play(group1)
+        # self.add(Line(LEFT, RIGHT).set_color(BLUE))
+        #self.wait()
+        # self.add(line)
+        # self.play(Rotating(line), line.animate.set_color(BLUE))
+        self.add(*list, *circles)
+        #self.play(FadeIn(*list), FadeIn(*circ_list))
+        #self.wait()
+
