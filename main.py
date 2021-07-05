@@ -715,12 +715,12 @@ class TryPermute(Scene):
         group1 = AnimationGroup(*[UpdateFromAlphaFunc(inte, update_sector,
                                 rate_func=rate_functions.ease_in_out_expo, run_time=run_time),
             Rotating(integrals[0], radians=angle, rate_func=rate_functions.ease_in_out_expo, run_time=run_time)], lag_ratio=0)
-        #self.play(group1)
+        self.play(group1)
         # self.add(Line(LEFT, RIGHT).set_color(BLUE))
-        #self.wait()
+        self.wait()
         # self.add(line)
         # self.play(Rotating(line), line.animate.set_color(BLUE))
-        self.add(*list, *circles)
+        # self.add(*list, *circles)
         #self.play(FadeIn(*list), FadeIn(*circ_list))
         #self.wait()
 
