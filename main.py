@@ -671,8 +671,9 @@ class TryPermute(Scene):
         self.remove(lcm_expression)
         
         
- class Logo(Scene):
+class Logo(Scene):
     def construct(self):
+        channel_name = MathTex("\\text{The}", " ")
         initial_circ = Circle(radius=0.037, fill_color=BLUE, fill_opacity=1, stroke_color=BLUE,
                               stroke_width=4)
 
@@ -696,31 +697,29 @@ class TryPermute(Scene):
         angle = TAU
 
         n = 5
+        run_time = 2
         for index in range(n):
-            list.append(MathTex('\int').rotate(2 * math.pi * index / n).scale(3))
+            list.append(MathTex('\int').rotate(math.pi * index / n).scale(3))
 
         integrals = VGroup(*list)
-        inte = list[1]
-        inte.save_state()
+        integral_fade_ins = []
 
-        def update_sector(mob, alpha):
-            mob.restore()
-            start_angle = interpolate(0, angle*180/math.pi, alpha)
-            mob.become(
-                inte.rotate(start_angle*DEGREES).set_opacity(interpolate(0, 1, alpha))
-            )
-        run_time = 2
-        self.add(integrals[0])
+        order_of_appearence = [1, 2, 3, 4]
+        for index in range(1, n):
+            def update_sector(mob, alpha):
+                # start_angle = interpolate(0, angle * 180 / math.pi, alpha)
+                mob.become(
+                    mob.set_opacity(interpolate(0, 1, alpha))
+                )
 
-        group1 = AnimationGroup(*[UpdateFromAlphaFunc(inte, update_sector,
-                                rate_func=rate_functions.ease_in_out_expo, run_time=run_time),
-            Rotating(integrals[0], radians=angle, rate_func=rate_functions.ease_in_out_expo, run_time=run_time)], lag_ratio=0)
-        self.play(group1)
-        # self.add(Line(LEFT, RIGHT).set_color(BLUE))
+            integral_fade_ins.append(UpdateFromAlphaFunc(integrals[index], update_sector,
+                                                         rate_func=rate_functions.ease_in_out_expo,
+                                                         run_time=run_time))
+
+        fade_in_group = AnimationGroup(*integral_fade_ins, lag_ratio=1)
+
+        self.play(Write(integrals[0]), run_time=run_time)
+        self.play(fade_in_group, Rotating(integrals, radians=4*TAU, run_time=4*run_time,
+                                          rate_func=rate_functions.ease_in_out_expo),
+                  FadeIn(circles, run_time=4*run_time))
         self.wait()
-        # self.add(line)
-        # self.play(Rotating(line), line.animate.set_color(BLUE))
-        # self.add(*list, *circles)
-        #self.play(FadeIn(*list), FadeIn(*circ_list))
-        #self.wait()
-
