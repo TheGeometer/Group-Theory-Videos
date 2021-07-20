@@ -2,7 +2,12 @@
 import math
 from abc import ABC
 
+import colour
 from manim import *
+from sympy.ntheory import factorint
+import math
+import numpy as np
+import random
 
 
 class VectorTrial:
