@@ -1071,3 +1071,138 @@ class LCMExplanationNew(Scene):
         self.play(FadeIn(lcm_expression_final))
         self.remove(lcm_expression)
 
+
+class CycleLengths2(Scene):
+    def moveTo(self, mobject, move_to_location, run_time):
+        mobject.generate_target()
+        mobject.target.shift(move_to_location-mobject.get_center())
+        return MoveToTarget(mobject, run_time=run_time)
+
+    def construct(self):
+        equations = MathTex(
+            '\\text{lcm}(', 'c_1', ',', 'c_2', ',', '\\dots', ',',  'c_m', ') &=',
+            '1000',
+            '\color{black} = 2^3 \cdot 5^3\\\\',
+            'c_1 + c_2 + ... + c_m &= n'
+        )
+        # c_1 --> 1
+        # c_2 --> 3
+        # ... --> 5
+        # c_m --> 7
+
+        the_rest = [index for index in range(len(equations))]
+        the_rest.pop(7)
+        the_rest.pop(5)
+        the_rest.pop(3)
+        the_rest.pop(1)
+
+        vertical_eqs = MathTex(
+            'c_1', '&=', '2', '^{a_1}', '5', '^{b_1}\\\\',
+            'c_2', '&=', '2', '^{a_2}', '5', '^{b_2}\\\\',
+            '\\vdots \\\\',
+            'c_m', '&=', '2', '^{a_m}', '5', '^{b_m}',
+        ).shift(UP)
+
+        # c_1 --> 0
+        # c_2 --> 6
+        # \vdots --> 12
+        # c_m --> 13
+        # = --> 14
+
+        vertical_eqs_cj = MathTex(
+            'c_1', '&=', '2', '^{a_1}', '5', '^{b_1}\\\\',
+            'c_2', '&=', '2', '^{a_2}', '5', '^{b_2}\\\\',
+            '\\vdots \\\\',
+            'c_j', '&=', '2', '^{a_j}', '5', '^{b_j}\\\\',
+            '\\vdots\\\\',
+            'c_m', '&=', '2', '^{a_m}', '5', '^{b_m}',
+        ).shift(UP)
+
+        # 12, 19
+        vertical_eqs_cj[12].set_opacity(0)
+        vertical_eqs_cj[19].set_opacity(0)
+
+
+        lcm_equation = MathTex(
+            '\\text{lcm}(', 'c_1', ',', 'c_2', ',', '\\dots', ',',  'c_m', ')', '&=', '1000'
+        )
+        lcm_equation_final = MathTex(
+            '\\text{lcm}(', 'c_1', ',', 'c_2', ',', '\\dots', ',',  'c_m', ')', '&=', '2', '^{3}',
+            '\cdot', '5', '^{3}'
+        )
+
+        # = --> 9
+
+        shift_vector = vertical_eqs[14].get_center()+DOWN-lcm_equation[9].get_center()
+        shift_vector_final = vertical_eqs[14].get_center()+DOWN-lcm_equation_final[9].get_center()
+
+        lcm_equation.shift(shift_vector)
+        lcm_equation_final.shift(shift_vector_final)
+
+        equations[5].save_state()
+        #vertical_eqs[12].shift(equations[5].get_center()-vertical_eqs[12].get_center())
+        vertical_eqs[12].set_opacity(0)
+
+        def ellipses_mover(mob, alpha):
+            mob.restore()
+            desti = vertical_eqs[12].get_center()+[vertical_eqs[0].get_x() - vertical_eqs[12].get_x(), 0, 0]
+            start = equations[5].get_center()
+            mob.become(
+                MathTex('\dots').shift(
+                    start+(desti-start)*interpolate(0, 1, alpha)
+                ).rotate(
+                    interpolate(0,
+                                np.round(PI/2, 5),
+                                alpha))
+            )
+
+        run_time = 2
+
+        c_moves = [UpdateFromAlphaFunc(equations[5], ellipses_mover, run_time=run_time),
+                   equations[1].animate(run_time=run_time).move_to(vertical_eqs[0].get_center()),
+                   equations[3].animate(run_time=run_time).move_to(vertical_eqs[6].get_center()),
+                   equations[7].animate(run_time=run_time).move_to(vertical_eqs[13].get_center())]
+
+        fade_out_equations = [FadeOut(equations[index], run_time=run_time/2) for index in the_rest]
+
+        cj_moves = [CycleLengths2.moveTo(self, vertical_eqs[index], vertical_eqs_cj[index].get_center(), run_time) for index in range(12)]
+
+        dots_copy = MathTex('\dots')
+        dots_copy.rotate(np.round(PI / 2, 5))
+        dots_copy.move_to(vertical_eqs[12].get_center()+[vertical_eqs[0].get_x() - vertical_eqs[12].get_x(), 0, 0])
+
+        dots_copy_2 = MathTex('\dots')
+        dots_copy_2.rotate(np.round(PI / 2, 5))
+        dots_copy_2.move_to(vertical_eqs[12].get_center() + [vertical_eqs[0].get_x() - vertical_eqs[12].get_x(), 0, 0])
+
+        cj_moves.append(CycleLengths2.moveTo(self, dots_copy, [dots_copy.get_x(), vertical_eqs_cj[19].get_y(), 0], run_time))
+        cj_moves.append(CycleLengths2.moveTo(self, dots_copy_2, [dots_copy_2.get_x(), vertical_eqs_cj[12].get_y(), 0], run_time))
+        for index in range(13, 19):
+            cj_moves.append(vertical_eqs[index].animate(run_time=run_time).move_to(vertical_eqs_cj[index+7].get_center()))
+
+        shift_vec = -vertical_eqs[13].get_center()+vertical_eqs_cj[20].get_center()
+        cj_moves.append(lcm_equation_final.animate(run_time=run_time).shift(shift_vec))
+
+        self.play(FadeIn(*equations))
+        self.play(*c_moves, *fade_out_equations)
+        self.wait()
+        self.play(FadeIn(vertical_eqs))
+        self.add(dots_copy, dots_copy_2)
+        self.remove(equations[1], equations[3], equations[5], equations[7])
+        self.wait()
+        self.play(Write(lcm_equation, run_time=run_time))
+        self.wait()
+        self.play(FadeOut(lcm_equation[-1]))
+        self.wait()
+        self.play(FadeIn(lcm_equation_final))
+        self.remove(*[lcm_equation[index] for index in range(len(lcm_equation)) if index != -1])
+        self.wait()
+        self.play(vertical_eqs.animate.set_color_by_tex('^{a', RED))
+        self.wait()
+        self.play(vertical_eqs.animate.set_color_by_tex('^{a', WHITE))
+        self.wait()
+        self.play(*cj_moves)
+        self.wait()
+        self.play(FadeIn(vertical_eqs_cj))
+        self.remove(vertical_eqs)
+        self.wait()
