@@ -1368,3 +1368,92 @@ class Preamble(Scene):
 
         self.play(FadeOut(orb, below_text_3))
 
+
+	class IdentityIn5(Scene):
+    num_permutes = 0
+
+    def permute(self, dots, labels, permutations):
+        transforms = []
+        create_arrows = []
+        destroy_arrows = []
+        fade_out_labels = [FadeOut(label) for label in labels]
+
+        for permutation in permutations:
+            for index in range(len(permutation) - 1):
+                transforms.append(
+                    Transform(
+                        dots[permutation[index]], dots[permutation[index + 1]]
+                    )
+                )
+                arrow = make_arrow_between(dots[permutation[index]], dots[permutation[index + 1]])
+                create_arrows.append(FadeIn(arrow))
+                destroy_arrows.append(FadeOut(arrow))
+
+        self.play(*create_arrows)
+        self.play(*fade_out_labels)
+        self.play(*transforms, *destroy_arrows, run_time=2)
+        self.num_permutes += 1
+        fade_in_labels = [FadeIn(label) for label in labels]
+        for label, dot in zip(labels, dots):
+            label.move_to(dot.get_center() * 1.1)
+
+        self.play(*fade_in_labels)
+
+    def construct(self):
+        circle = Circle(radius=3, color=BLACK)
+        self.add(circle)
+
+        num_points = 20
+
+        dots = []
+        labels = []
+
+        for c, angle in enumerate(np.linspace(0, TAU, num_points, endpoint=False)):
+            point = circle.point_at_angle(angle)
+            dot = Dot(point=point)
+            dots.append(dot)
+            label = Integer(number=c + 1).scale(0.5).move_to(dot.get_center() * 1.1)
+            labels.append(label)
+            self.add(dot, label)
+
+        permutations = [
+            [0, 4, 8, 12, 16, 0],
+            [1, 5, 9, 13, 17, 1],
+            [2, 6, 10, 14, 18, 2],
+            [3, 7, 11, 15, 19, 3],
+        ]
+
+        counter = Integer(0).scale(0.5).move_to(RIGHT * 4 + UP * 3.5)
+        counter.add_updater(lambda i: i.set_value(self.num_permutes))
+        self.add(counter)
+
+        for _ in range(5):
+            self.permute(dots, labels, permutations)
+            self.wait()
+
+
+def make_arrow_between(dot1, dot2, buff):
+    arrow = Line(
+        dot1.get_center(),
+        dot2.get_center(),
+        stroke_width=3,
+        buff=buff
+    )
+
+    return arrow
+
+
+def arrow_add_sticky_updater(arrow, dot1, dot2):
+    arrow.add_updater(
+        lambda arw: arw.put_start_and_end_on(
+            Line(start=dot1.get_center(), end=dot2.get_center()).scale(0.9).get_start(),
+            Line(start=dot1.get_center(), end=dot2.get_center()).scale(0.9).get_end()
+        )
+    )
+
+
+def make_sticky_arrow_between(dot1, dot2):
+    arrow = make_arrow_between(dot1, dot2)
+    arrow_add_sticky_updater(arrow, dot1, dot2)
+
+    return arrow
